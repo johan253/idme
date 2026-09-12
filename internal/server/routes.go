@@ -44,13 +44,6 @@ func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := r.Cookie("access_token")
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("Unauthorized"))
-		return
-	}
 }
 
 func (s *Server) LogoutHandler(w http.ResponseWriter, r *http.Request) {
