@@ -47,6 +47,7 @@ func Load() (*Config, error) {
 		Port:          port,
 		JwtSecret:     jwtSecret,
 		JwtTtlSeconds: jwtTtlSeconds,
+		DatabaseURL:   postgresURL,
 	}
 
 	return cfg, nil
