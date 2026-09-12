@@ -7,7 +7,92 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (username, email, password_hash, roles)
+VALUES ($1, $2, $3, $4)
+RETURNING id, username, email, password_hash, roles, created_at, updated_at
+`
+
+type CreateUserParams struct {
+	Username     string   `json:"username"`
+	Email        string   `json:"email"`
+	PasswordHash string   `json:"password_hash"`
+	Roles        []string `json:"roles"`
+}
+
+// Inserts a new user into the users table and returns the created user.
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUser,
+		arg.Username,
+		arg.Email,
+		arg.PasswordHash,
+		arg.Roles,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Roles,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users
+WHERE id = $1
+`
+
+// Deletes a user from the users table by their unique identifier.
+func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUser, id)
+	return err
+}
+
+const emailExists = `-- name: EmailExists :one
+SELECT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE email = $1
+)
+`
+
+// Checks if an email address already exists in the users table.
+func (q *Queries) EmailExists(ctx context.Context, email string) (bool, error) {
+	row := q.db.QueryRow(ctx, emailExists, email)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, username, email, password_hash, roles, created_at, updated_at
+FROM users
+WHERE email = $1 LIMIT 1
+`
+
+// Retrieves a user by their unique email address.
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Roles,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
 
 const getUserById = `-- name: GetUserById :one
 SELECT id, username, email, password_hash, roles, created_at, updated_at
@@ -16,7 +101,7 @@ WHERE id = $1 LIMIT 1
 `
 
 // Retrieves a user by their unique identifier.
-func (q *Queries) GetUserById(ctx context.Context, id string) (User, error) {
+func (q *Queries) GetUserById(ctx context.Context, id pgtype.UUID) (User, error) {
 	row := q.db.QueryRow(ctx, getUserById, id)
 	var i User
 	err := row.Scan(
@@ -51,4 +136,108 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listUsers = `-- name: ListUsers :many
+SELECT username, email, roles, created_at, updated_at
+FROM users
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListUsersRow struct {
+	Username  string           `json:"username"`
+	Email     string           `json:"email"`
+	Roles     []string         `json:"roles"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+}
+
+// Retrieves a list of users with optional pagination.
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
+	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUsersRow
+	for rows.Next() {
+		var i ListUsersRow
+		if err := rows.Scan(
+			&i.Username,
+			&i.Email,
+			&i.Roles,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET username = COALESCE($1, username),
+    email = COALESCE($2, email),
+    password_hash = COALESCE($3, password_hash),
+    roles = COALESCE($4, roles),
+    updated_at = NOW()
+WHERE id = $5
+RETURNING id, username, email, password_hash, roles, created_at, updated_at
+`
+
+type UpdateUserParams struct {
+	Username     pgtype.Text `json:"username"`
+	Email        pgtype.Text `json:"email"`
+	PasswordHash pgtype.Text `json:"password_hash"`
+	Roles        []string    `json:"roles"`
+	ID           pgtype.UUID `json:"id"`
+}
+
+// Updates an existing user's information
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.Username,
+		arg.Email,
+		arg.PasswordHash,
+		arg.Roles,
+		arg.ID,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Roles,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const usernameExists = `-- name: UsernameExists :one
+SELECT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE username = $1
+)
+`
+
+// Checks if a username already exists in the users table.
+func (q *Queries) UsernameExists(ctx context.Context, username string) (bool, error) {
+	row := q.db.QueryRow(ctx, usernameExists, username)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }

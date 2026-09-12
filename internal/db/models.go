@@ -9,7 +9,7 @@ import (
 )
 
 type User struct {
-	ID           string           `json:"id"`
+	ID           pgtype.UUID      `json:"id"`
 	Username     string           `json:"username"`
 	Email        string           `json:"email"`
 	PasswordHash string           `json:"password_hash"`

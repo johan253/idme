@@ -6,13 +6,29 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
+	// Inserts a new user into the users table and returns the created user.
+	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	// Deletes a user from the users table by their unique identifier.
+	DeleteUser(ctx context.Context, id pgtype.UUID) error
+	// Checks if an email address already exists in the users table.
+	EmailExists(ctx context.Context, email string) (bool, error)
+	// Retrieves a user by their unique email address.
+	GetUserByEmail(ctx context.Context, email string) (User, error)
 	// Retrieves a user by their unique identifier.
-	GetUserById(ctx context.Context, id string) (User, error)
+	GetUserById(ctx context.Context, id pgtype.UUID) (User, error)
 	// Retrieves a user by their unique username.
 	GetUserByUsername(ctx context.Context, username string) (User, error)
+	// Retrieves a list of users with optional pagination.
+	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
+	// Updates an existing user's information
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	// Checks if a username already exists in the users table.
+	UsernameExists(ctx context.Context, username string) (bool, error)
 }
 
 var _ Querier = (*Queries)(nil)
