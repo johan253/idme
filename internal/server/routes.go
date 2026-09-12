@@ -1,8 +1,6 @@
 package server
 
 import (
-	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -13,6 +11,9 @@ import (
 func (s *Server) RegisterRoutes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.RedirectSlashes)
 
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
@@ -22,19 +23,35 @@ func (s *Server) RegisterRoutes() http.Handler {
 		MaxAge:           300,
 	}))
 
-	r.Get("/", s.HelloWorldHandler)
+	// r.Get("/", s.HelloWorldHandler)
 
 	return r
 }
 
-func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
-	resp := make(map[string]string)
-	resp["message"] = "Hello World"
+// func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
+// 	resp := make(map[string]string)
+// 	resp["message"] = "Hello World"
+//
+// 	jsonResp, err := json.Marshal(resp)
+// 	if err != nil {
+// 		log.Fatalf("error handling JSON marshal. Err: %v", err)
+// 	}
+//
+// 	_, _ = w.Write(jsonResp)
+// }
 
-	jsonResp, err := json.Marshal(resp)
+func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+}
+
+func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := r.Cookie("access_token")
 	if err != nil {
-		log.Fatalf("error handling JSON marshal. Err: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Unauthorized"))
+		return
 	}
+}
 
-	_, _ = w.Write(jsonResp)
+func (s *Server) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
