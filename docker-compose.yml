@@ -7,6 +7,78 @@ services:
     restart: unless-stopped
     ports:
       - ${PORT}:${PORT}
+    env_file:
+      - .env
     environment:
-      APP_ENV: ${APP_ENV}
-      PORT: ${PORT}
+      # Override host: inside the compose network, "postgres" is the service name.
+      # (.env has POSTGRES_HOST=postgres for compose runs; change to localhost
+      # if you also run the binary directly against the compose DB.)
+      POSTGRES_HOST: postgres
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    networks:
+      - identity
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - identity
+
+  migrate:
+    image: migrate/migrate:v4.17.1
+    volumes:
+      - ./db/migrations:/migrations:ro
+    command:
+      - -path=/migrations
+      - -database=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=${POSTGRES_SSL_MODE}
+      - up
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - identity
+
+  # One-shot seed runner. Add another `-f /seeds/<file>.sql` line for each new
+  # seed file, in the order you want them applied (FK dependencies matter).
+  seed:
+    image: postgres:16-alpine
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+    command:
+      - psql
+      - -v
+      - ON_ERROR_STOP=1
+      - -f
+      - /seeds/users.sql
+    volumes:
+      - ./db/seeds:/seeds:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - identity
+
+networks:
+  identity:
+    driver: bridge
+
+volumes:
+  postgres_data:
