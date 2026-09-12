@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/johan253/idme/internal/handlers"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
@@ -23,28 +24,11 @@ func (s *Server) RegisterRoutes() http.Handler {
 		MaxAge:           300,
 	}))
 
-	// r.Get("/", s.HelloWorldHandler)
+	h := handlers.New(s.cfg, s.q)
+
+	r.Post("/register", h.Register)
+	r.Post("/login", h.Login)
+	r.Post("/logout", h.Logout)
 
 	return r
-}
-
-// func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
-// 	resp := make(map[string]string)
-// 	resp["message"] = "Hello World"
-//
-// 	jsonResp, err := json.Marshal(resp)
-// 	if err != nil {
-// 		log.Fatalf("error handling JSON marshal. Err: %v", err)
-// 	}
-//
-// 	_, _ = w.Write(jsonResp)
-// }
-
-func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
-}
-
-func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
-}
-
-func (s *Server) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
