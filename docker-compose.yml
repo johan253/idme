@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: prod
+    container_name: idme-api
     restart: unless-stopped
     ports:
       - ${PORT}:${PORT}
@@ -22,6 +23,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    container_name: idme-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -41,6 +43,7 @@ services:
 
   migrate:
     image: migrate/migrate:v4.17.1
+    container_name: idme-migrate
     volumes:
       - ./db/migrations:/migrations:ro
     command:
@@ -57,6 +60,7 @@ services:
   # seed file, in the order you want them applied (FK dependencies matter).
   seed:
     image: postgres:16-alpine
+    container_name: idme-seed
     environment:
       PGHOST: postgres
       PGUSER: ${POSTGRES_USER}

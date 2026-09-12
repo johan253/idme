@@ -13,12 +13,20 @@ build:
 run:
 	@go run cmd/api/main.go
 # Create DB container
-docker-run:
-	@if docker compose up --build 2>/dev/null; then \
+docker-rebuild:
+	@if docker compose up --build -d 2>/dev/null; then \
 		: ; \
 	else \
 		echo "Falling back to Docker Compose V1"; \
-		docker-compose up --build; \
+		docker-compose up --build -d; \
+	fi
+
+docker-up:
+	@if docker compose up -d 2>/dev/null; then \
+		: ; \
+	else \
+		echo "Falling back to Docker Compose V1"; \
+		docker-compose up -d; \
 	fi
 
 # Shutdown DB container
@@ -28,6 +36,14 @@ docker-down:
 	else \
 		echo "Falling back to Docker Compose V1"; \
 		docker-compose down; \
+	fi
+
+docker-logs:
+	@if docker compose logs api -f 2>/dev/null; then \
+		: ; \
+	else \
+		echo "Falling back to Docker Compose V1"; \
+		docker-compose logs api -f; \
 	fi
 
 # Test the application
