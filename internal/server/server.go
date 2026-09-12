@@ -6,15 +6,18 @@ import (
 	"time"
 
 	"github.com/johan253/idme/internal/config"
+	"github.com/johan253/idme/internal/db"
 )
 
 type Server struct {
 	cfg *config.Config
+	q   *db.Queries
 }
 
-func NewServer(cfg *config.Config) *http.Server {
+func NewServer(cfg *config.Config, q *db.Queries) *http.Server {
 	NewServer := &Server{
 		cfg: cfg,
+		q:   q,
 	}
 
 	// Declare Server config

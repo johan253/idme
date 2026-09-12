@@ -9,7 +9,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/johan253/idme/internal/config"
+	"github.com/johan253/idme/internal/db"
 	"github.com/johan253/idme/internal/server"
 )
 
@@ -39,12 +41,22 @@ func gracefulShutdown(apiServer *http.Server, done chan bool) {
 }
 
 func main() {
+	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 		return
 	}
-	server := server.NewServer(cfg)
+
+	// Create a database connection pool
+	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("Failed to create database connection pool: %v", err)
+		return
+	}
+	queries := db.New(pool)
+
+	server := server.NewServer(cfg, queries)
 
 	// Create a done channel to signal when the shutdown is complete
 	done := make(chan bool, 1)
