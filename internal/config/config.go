@@ -9,21 +9,24 @@ import (
 )
 
 type Config struct {
-	Port      int
-	JwtSecret string
+	Port          int
+	JwtSecret     string
+	JwtTtlSeconds int
 }
 
 func Load() (*Config, error) {
 	port := envInt("PORT", 8080)
 	jwtSecret := envOr("JWT_SECRET", "")
+	jwtTtlSeconds := envInt("JWT_TTL_SECONDS", 600) // Default to 10 minutes
 
 	if jwtSecret == "" {
 		return nil, fmt.Errorf("JWT_SECRET environment variable is required")
 	}
 
 	cfg := &Config{
-		Port:      port,
-		JwtSecret: jwtSecret,
+		Port:          port,
+		JwtSecret:     jwtSecret,
+		JwtTtlSeconds: jwtTtlSeconds,
 	}
 
 	return cfg, nil
