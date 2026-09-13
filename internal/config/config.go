@@ -10,10 +10,11 @@ import (
 )
 
 type Config struct {
-	Port          int
-	JwtSecret     string
-	JwtTtlSeconds int
-	DatabaseURL   string
+	Port             int
+	JwtSecret        string
+	JwtRefreshSecret string
+	JwtTTLSeconds    int
+	DatabaseURL      string
 }
 
 func Load() (*Config, error) {
@@ -22,7 +23,8 @@ func Load() (*Config, error) {
 
 	// JWT secret and TTL
 	jwtSecret := envOr("JWT_SECRET", "")
-	jwtTtlSeconds := envInt("JWT_TTL_SECONDS", 600) // Default to 10 minutes
+	jwtRefreshSecret := envOr("JWT_REFRESH_SECRET", "")
+	jwtTTLSeconds := envInt("JWT_TTL_SECONDS", 600) // Default to 10 minutes
 
 	// Database configuration
 	postgresHost := envOr("POSTGRES_HOST", "localhost")
@@ -37,6 +39,9 @@ func Load() (*Config, error) {
 	if jwtSecret == "" {
 		return nil, fmt.Errorf("JWT_SECRET environment variable is required")
 	}
+	if jwtRefreshSecret == "" {
+		return nil, fmt.Errorf("JWT_REFRESH_SECRET environment variable is required")
+	}
 
 	if err := validPostgresURL(postgresURL); err != nil {
 		return nil, fmt.Errorf("invalid Postgres URL: %s", postgresURL)
@@ -44,10 +49,11 @@ func Load() (*Config, error) {
 
 	// Return the configuration
 	cfg := &Config{
-		Port:          port,
-		JwtSecret:     jwtSecret,
-		JwtTtlSeconds: jwtTtlSeconds,
-		DatabaseURL:   postgresURL,
+		Port:             port,
+		JwtSecret:        jwtSecret,
+		JwtRefreshSecret: jwtRefreshSecret,
+		JwtTTLSeconds:    jwtTTLSeconds,
+		DatabaseURL:      postgresURL,
 	}
 
 	return cfg, nil

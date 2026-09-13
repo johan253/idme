@@ -23,8 +23,9 @@ type registerRequest struct {
 }
 
 type authResponse struct {
-	AccessToken string    `json:"access_token"`
-	User        auth.User `json:"user"`
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token,omitempty"`
+	User         auth.User `json:"user"`
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {

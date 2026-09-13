@@ -29,7 +29,7 @@ const claimsKey ctxKey = "claims"
 var ErrUnauthorized = errors.New("unauthorized")
 
 type User struct {
-	Id       string   `json:"id"`
+	Id       string   `json:"id"` // User ID, typically a UUID
 	Username string   `json:"username"`
 	Roles    []string `json:"roles"`
 }
@@ -39,21 +39,21 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+// Sign creates a signed JWT fot the given user
 func Sign(cfg *config.Config, user *User) (string, error) {
 	iat := time.Now()
-	exp := iat.Add(time.Duration(cfg.JwtTtlSeconds) * time.Second)
+	exp := iat.Add(time.Duration(cfg.JwtTTLSeconds) * time.Second)
 
 	claims := &Claims{
-		User: *user,
-		RegisteredClaims: jwt.RegisteredClaims{
-			IssuedAt:  jwt.NewNumericDate(iat),
-			ExpiresAt: jwt.NewNumericDate(exp),
-		},
+		User:      *user,
+		IssuedAt:  jwt.NewNumericDate(iat),
+		ExpiresAt: jwt.NewNumericDate(exp),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(cfg.JwtSecret))
 }
 
+// Parse validates the given JWT and returns the claims if valid.
 func Parse(cfg *config.Config, token string) (*Claims, error) {
 	claims := &Claims{}
 	tok, err := jwt.ParseWithClaims(token, claims, func(t *jwt.Token) (any, error) {
@@ -68,6 +68,7 @@ func Parse(cfg *config.Config, token string) (*Claims, error) {
 	return claims, nil
 }
 
+// ClaimsFrom extracts the claims from the context, if present.
 func ClaimsFrom(ctx context.Context) (*Claims, bool) {
 	claims, ok := ctx.Value(claimsKey).(*Claims)
 	return claims, ok
@@ -78,8 +79,8 @@ func extractToken(r *http.Request) (string, error) {
 		return cookie.Value, nil
 	}
 	header := r.Header.Get("Authorization")
-	if strings.HasPrefix(header, "Bearer ") {
-		return strings.TrimPrefix(header, "Bearer "), nil
+	if after, ok := strings.CutPrefix(header, "Bearer "); ok {
+		return after, nil
 	}
 	return "", ErrUnauthorized
 }
