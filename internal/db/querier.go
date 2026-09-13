@@ -13,16 +13,22 @@ import (
 type Querier interface {
 	// Inserts a new user into the users table and returns the created user.
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	// Delete a refresh token by its hash.
+	DeleteRefreshToken(ctx context.Context, tokenHash string) error
 	// Deletes a user from the users table by their unique identifier.
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
 	// Checks if an email address already exists in the users table.
 	EmailExists(ctx context.Context, email string) (bool, error)
+	// Retrieve a refresh token by its hash.
+	GetRefreshToken(ctx context.Context, tokenHash string) (RefreshToken, error)
 	// Retrieves a user by their unique email address.
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	// Retrieves a user by their unique identifier.
 	GetUserById(ctx context.Context, id pgtype.UUID) (User, error)
 	// Retrieves a user by their unique username.
 	GetUserByUsername(ctx context.Context, username string) (User, error)
+	// Insert a new refresh token for a user.
+	InsertRefreshToken(ctx context.Context, arg InsertRefreshTokenParams) (RefreshToken, error)
 	// Retrieves a list of users with optional pagination.
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	// Updates an existing user's information
