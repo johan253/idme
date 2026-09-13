@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -25,15 +26,18 @@ type registerResponse struct {
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	req := &registerRequest{}
 	if err := utils.ReadJSONFromBody(r, req); err != nil {
+		log.Printf("register: decode request body: %v", err)
 		writeError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 	if err := utils.Validator.Struct(req); err != nil {
+		log.Printf("register: validation failed for username=%q email=%q: %v", req.Username, req.Email, err)
 		writeError(w, http.StatusBadRequest, utils.FriendlyValidationError(err))
 		return
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
+		log.Printf("register: bcrypt hash: %v", err)
 		writeError(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
@@ -41,13 +45,16 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		Username:     req.Username,
 		PasswordHash: string(hashedPassword),
 		Email:        req.Email,
+		Roles:        []string{"user"},
 	})
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
+			log.Printf("register: unique violation for username=%q email=%q: %v", req.Username, req.Email, err)
 			writeError(w, http.StatusConflict, "Username or email already exists")
 			return
 		}
+		log.Printf("register: create user (username=%q email=%q): %v", req.Username, req.Email, err)
 		writeError(w, http.StatusInternalServerError, "Failed to create user")
 		return
 	}
@@ -58,6 +65,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	accessToken, err := auth.Sign(h.cfg, authUser)
 	if err != nil {
+		log.Printf("register: sign token for user id=%s: %v", authUser.Id, err)
 		writeError(w, http.StatusInternalServerError, "Failed to generate access token")
 		return
 	}
