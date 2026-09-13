@@ -4,17 +4,18 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimiddle "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/johan253/idme/internal/handlers"
+	"github.com/johan253/idme/internal/middleware"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(middleware.RequestID)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.RedirectSlashes)
+	r.Use(chimiddle.Logger)
+	r.Use(chimiddle.RequestID)
+	r.Use(chimiddle.Recoverer)
+	r.Use(chimiddle.RedirectSlashes)
 
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
@@ -29,6 +30,11 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Post("/register", h.Register)
 	r.Post("/login", h.Login)
 	r.Post("/logout", h.Logout)
+
+	r.With(middleware.Authorization(s.cfg)).Route("/user", func(r chi.Router) {
+		r.Get("/", h.GetUser)
+		r.Delete("/", h.DeleteUser)
+	})
 
 	return r
 }
