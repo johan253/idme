@@ -28,7 +28,12 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "Failed to get user")
 		return
 	}
-	utils.WriteJSONToBody(w, http.StatusOK, user)
+	authUser := &auth.User{
+		Id:       user.ID.String(),
+		Username: user.Username,
+		Roles:    user.Roles,
+	}
+	utils.WriteJSONToBody(w, http.StatusOK, authUser)
 }
 
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -50,5 +55,5 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "Failed to delete user")
 		return
 	}
-	utils.WriteJSONToBody(w, http.StatusOK, map[string]string{"message": "User deleted successfully"})
+	utils.WriteJSONToBody(w, http.StatusOK, &successResponse{Message: "User deleted successfully"})
 }
