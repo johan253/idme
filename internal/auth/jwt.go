@@ -11,6 +11,17 @@ import (
 	"github.com/johan253/idme/internal/config"
 )
 
+// WithClaims returns a copy of ctx with the given claims attached.
+func WithClaims(ctx context.Context, claims *Claims) context.Context {
+	return context.WithValue(ctx, claimsKey, claims)
+}
+
+// ExtractToken pulls a JWT from either the access_token cookie or a Bearer
+// Authorization header.
+func ExtractToken(r *http.Request) (string, error) {
+	return extractToken(r)
+}
+
 type ctxKey string
 
 const claimsKey ctxKey = "claims"
@@ -55,25 +66,6 @@ func Parse(cfg *config.Config, token string) (*Claims, error) {
 		return nil, ErrUnauthorized
 	}
 	return claims, nil
-}
-
-func Authorization(cfg *config.Config) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token, err := extractToken(r)
-			if err != nil {
-				http.Error(w, ErrUnauthorized.Error(), http.StatusUnauthorized)
-				return
-			}
-			claims, err := Parse(cfg, token)
-			if err != nil {
-				http.Error(w, ErrUnauthorized.Error(), http.StatusUnauthorized)
-				return
-			}
-			ctx := context.WithValue(r.Context(), claimsKey, claims)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
 }
 
 func ClaimsFrom(ctx context.Context) (*Claims, bool) {
