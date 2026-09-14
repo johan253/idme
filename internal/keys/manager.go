@@ -3,6 +3,7 @@ package keys
 import (
 	"context"
 	"errors"
+	"log"
 	"sync"
 	"time"
 
@@ -62,10 +63,13 @@ func (m *Manager) loop(ctx context.Context) {
 
 // Reload rebuilds the in-memory view from the database.
 func (m *Manager) Reload(ctx context.Context) error {
+	start := time.Now()
 	rows, err := m.store.ListSigningKeys(ctx)
 	if err != nil {
 		return err
 	}
+	duration := time.Since(start)
+	log.Printf("manager: found %v keys duration=%v", len(rows), duration)
 
 	var active *KeyPair
 	byKid := make(map[string]*KeyPair, len(rows))
