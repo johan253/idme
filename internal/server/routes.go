@@ -25,7 +25,12 @@ func (s *Server) RegisterRoutes() http.Handler {
 		MaxAge:           300,
 	}))
 
-	h := handlers.New(s.cfg, s.q)
+	h := handlers.New(s.cfg, s.q, s.m)
+
+	// Well known endpoints
+	r.Route("/.well-known", func(r chi.Router) {
+		r.Get("/jwks.json", h.JWKS)
+	})
 
 	r.Post("/register", h.Register)
 	r.Post("/login", h.Login)

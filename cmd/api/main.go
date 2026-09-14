@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/johan253/idme/internal/config"
 	"github.com/johan253/idme/internal/db"
+	"github.com/johan253/idme/internal/keys"
 	"github.com/johan253/idme/internal/server"
 )
 
@@ -56,7 +57,21 @@ func main() {
 	}
 	queries := db.New(pool)
 
-	server := server.NewServer(cfg, queries)
+	// Create a new Cipher object for decrypting JWKs
+	cipher, err := keys.NewAESGCMCipher([]byte(cfg.Kek))
+	if err != nil {
+		log.Fatalf("Failed to create cipher object: %v", err)
+		return
+	}
+
+	// Create a new Manager object for managing JWKs in this process
+	manager := keys.NewManager(queries, cipher, cfg.JwkRefreshInterval)
+	if err := manager.Start(context.Background()); err != nil {
+		log.Fatalf("Failed to begin key manager process: %v", err)
+		return
+	}
+
+	server := server.NewServer(cfg, queries, manager)
 
 	// Create a done channel to signal when the shutdown is complete
 	done := make(chan bool, 1)

@@ -1,20 +1,25 @@
 package config
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	_ "github.com/joho/godotenv/autoload" // Load .env file automatically
 )
 
 type Config struct {
-	Port             int
-	JwtSecret        string
-	JwtRefreshSecret string
-	JwtTTLSeconds    int
-	DatabaseURL      string
+	Port               int
+	JwtSecret          string
+	JwtRefreshSecret   string
+	JwtTTLSeconds      int
+	DatabaseURL        string
+	Kek                []byte
+	JwkRefreshInterval time.Duration
+	JwkGraceDuration   time.Duration
 }
 
 func Load() (*Config, error) {
@@ -35,6 +40,11 @@ func Load() (*Config, error) {
 	postgresSSLMode := envOr("POSTGRES_SSL_MODE", "disable")
 	postgresURL := envOr("POSTGRES_URL", fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", postgresUser, postgresPassword, postgresHost, postgresPort, postgresDatabase, postgresSSLMode))
 
+	// JWK params
+	kekRaw := envOr("JWK_KEK", "")
+	jwkRefreshInterval := envInt("JWK_REFRESH_SECONDS", 60)
+	jwkGraceSeconds := envInt("JWT_GRACE_SECONDS", 60)
+
 	// Validate required environment variables
 	if jwtSecret == "" {
 		return nil, fmt.Errorf("JWT_SECRET environment variable is required")
@@ -42,18 +52,30 @@ func Load() (*Config, error) {
 	if jwtRefreshSecret == "" {
 		return nil, fmt.Errorf("JWT_REFRESH_SECRET environment variable is required")
 	}
-
 	if err := validPostgresURL(postgresURL); err != nil {
 		return nil, fmt.Errorf("invalid Postgres URL: %s", postgresURL)
+	}
+	if kekRaw == "" {
+		return nil, fmt.Errorf("JWK_KEK environment variable is required")
+	}
+	kek, err := base64.StdEncoding.DecodeString(kekRaw)
+	if err != nil {
+		return nil, fmt.Errorf("JWK_KEK is not valid base64: %w", err)
+	}
+	if len(kek) != 32 {
+		return nil, fmt.Errorf("JWR_KEK must decode to 32 bytes, got %d", len(kek))
 	}
 
 	// Return the configuration
 	cfg := &Config{
-		Port:             port,
-		JwtSecret:        jwtSecret,
-		JwtRefreshSecret: jwtRefreshSecret,
-		JwtTTLSeconds:    jwtTTLSeconds,
-		DatabaseURL:      postgresURL,
+		Port:               port,
+		JwtSecret:          jwtSecret,
+		JwtRefreshSecret:   jwtRefreshSecret,
+		JwtTTLSeconds:      jwtTTLSeconds,
+		DatabaseURL:        postgresURL,
+		Kek:                kek,
+		JwkRefreshInterval: time.Duration(jwkRefreshInterval) * time.Second,
+		JwkGraceDuration:   time.Duration(jwkGraceSeconds) * time.Second,
 	}
 
 	return cfg, nil
