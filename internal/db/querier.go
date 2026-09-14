@@ -17,11 +17,12 @@ type Querier interface {
 	DeactivateAllSigningKeys(ctx context.Context) error
 	// Delete a refresh token by its hash.
 	DeleteRefreshToken(ctx context.Context, tokenHash string) error
-	DeleteSigningKey(ctx context.Context, kid string) error
+	DeleteSigningKey(ctx context.Context, kid string) (int64, error)
 	// Deletes a user from the users table by their unique identifier.
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
 	// Checks if an email address already exists in the users table.
 	EmailExists(ctx context.Context, email string) (bool, error)
+	// NOTE: Unused, will be remove in the future
 	GetActiveSigningKey(ctx context.Context) (SigningKey, error)
 	// Retrieve a refresh token by its hash.
 	GetRefreshToken(ctx context.Context, tokenHash string) (RefreshToken, error)
@@ -34,10 +35,12 @@ type Querier interface {
 	// Insert a new refresh token for a user.
 	InsertRefreshToken(ctx context.Context, arg InsertRefreshTokenParams) (RefreshToken, error)
 	InsertSigningKey(ctx context.Context, arg InsertSigningKeyParams) (SigningKey, error)
+	ListPrunableSigningKeys(ctx context.Context, createdAt pgtype.Timestamptz) ([]ListPrunableSigningKeysRow, error)
 	// All signing keys, active first. Feeds the in-memory cache and JWKS.
 	ListSigningKeys(ctx context.Context) ([]SigningKey, error)
 	// Retrieves a list of users with optional pagination.
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
+	PruneSigningKeys(ctx context.Context, createdAt pgtype.Timestamptz) (int64, error)
 	// Updates an existing user's information
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	// Checks if a username already exists in the users table.

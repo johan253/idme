@@ -7,6 +7,8 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const activateSigningKey = `-- name: ActivateSigningKey :execrows
@@ -30,13 +32,16 @@ func (q *Queries) DeactivateAllSigningKeys(ctx context.Context) error {
 	return err
 }
 
-const deleteSigningKey = `-- name: DeleteSigningKey :exec
+const deleteSigningKey = `-- name: DeleteSigningKey :execrows
 DELETE FROM signing_keys WHERE kid = $1
 `
 
-func (q *Queries) DeleteSigningKey(ctx context.Context, kid string) error {
-	_, err := q.db.Exec(ctx, deleteSigningKey, kid)
-	return err
+func (q *Queries) DeleteSigningKey(ctx context.Context, kid string) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteSigningKey, kid)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getActiveSigningKey = `-- name: GetActiveSigningKey :one
@@ -45,6 +50,7 @@ FROM signing_keys
 WHERE is_active
 `
 
+// NOTE: Unused, will be remove in the future
 func (q *Queries) GetActiveSigningKey(ctx context.Context) (SigningKey, error) {
 	row := q.db.QueryRow(ctx, getActiveSigningKey)
 	var i SigningKey
@@ -89,6 +95,38 @@ func (q *Queries) InsertSigningKey(ctx context.Context, arg InsertSigningKeyPara
 	return i, err
 }
 
+const listPrunableSigningKeys = `-- name: ListPrunableSigningKeys :many
+SELECT kid, created_at
+FROM signing_keys
+WHERE NOT is_active AND created_at < $1
+ORDER BY created_at
+`
+
+type ListPrunableSigningKeysRow struct {
+	Kid       string             `json:"kid"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ListPrunableSigningKeys(ctx context.Context, createdAt pgtype.Timestamptz) ([]ListPrunableSigningKeysRow, error) {
+	rows, err := q.db.Query(ctx, listPrunableSigningKeys, createdAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPrunableSigningKeysRow
+	for rows.Next() {
+		var i ListPrunableSigningKeysRow
+		if err := rows.Scan(&i.Kid, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSigningKeys = `-- name: ListSigningKeys :many
 SELECT kid, public_pem, private_enc, is_active, created_at
 FROM signing_keys
@@ -120,4 +158,17 @@ func (q *Queries) ListSigningKeys(ctx context.Context) ([]SigningKey, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const pruneSigningKeys = `-- name: PruneSigningKeys :execrows
+DELETE FROM signing_keys
+WHERE NOT is_active AND created_at < $1
+`
+
+func (q *Queries) PruneSigningKeys(ctx context.Context, createdAt pgtype.Timestamptz) (int64, error) {
+	result, err := q.db.Exec(ctx, pruneSigningKeys, createdAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
