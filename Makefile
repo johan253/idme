@@ -12,8 +12,17 @@ build:
 # Run the application
 run:
 	@go run cmd/api/main.go
-# Create DB container
+
+# Bring all resources down and rebuild back up
 docker-rebuild:
+	@echo "Tearing down services and db volume..."
+	@if docker compose down -v 2>/dev/null; then \
+		: ; \
+	else \
+		echo "Falling back to Docker Compose V1"; \
+		docker-compose down -v; \
+	fi
+	@echo "Rebuilding services and bringing them back up..."
 	@if docker compose up --build -d 2>/dev/null; then \
 		: ; \
 	else \
@@ -21,6 +30,7 @@ docker-rebuild:
 		docker-compose up --build -d; \
 	fi
 
+# Bring Services up
 docker-up:
 	@if docker compose up -d 2>/dev/null; then \
 		: ; \
@@ -29,7 +39,7 @@ docker-up:
 		docker-compose up -d; \
 	fi
 
-# Shutdown DB container
+# Bring services down
 docker-down:
 	@if docker compose down 2>/dev/null; then \
 		: ; \
@@ -38,12 +48,13 @@ docker-down:
 		docker-compose down; \
 	fi
 
+# Tail service logs
 docker-logs:
-	@if docker compose logs api -f 2>/dev/null; then \
+	@if docker compose logs -f 2>/dev/null; then \
 		: ; \
 	else \
 		echo "Falling back to Docker Compose V1"; \
-		docker-compose logs api -f; \
+		docker-compose logs -f; \
 	fi
 
 # Test the application
