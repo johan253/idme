@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 CREATE TABLE IF NOT EXISTS signing_keys (
     kid VARCHAR PRIMARY KEY,
     public_pem VARCHAR NOT NULL,
-    private_enc BYTEA NOT NULL
+    private_enc BYTEA NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -11,14 +11,18 @@ import (
 )
 
 type Querier interface {
+	ActivateSigningKey(ctx context.Context, kid string) error
 	// Inserts a new user into the users table and returns the created user.
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeactivateAllSigningKeys(ctx context.Context) error
 	// Delete a refresh token by its hash.
 	DeleteRefreshToken(ctx context.Context, tokenHash string) error
+	DeleteSigningKey(ctx context.Context, kid string) error
 	// Deletes a user from the users table by their unique identifier.
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
 	// Checks if an email address already exists in the users table.
 	EmailExists(ctx context.Context, email string) (bool, error)
+	GetActiveSigningKey(ctx context.Context) (SigningKey, error)
 	// Retrieve a refresh token by its hash.
 	GetRefreshToken(ctx context.Context, tokenHash string) (RefreshToken, error)
 	// Retrieves a user by their unique email address.
@@ -29,6 +33,9 @@ type Querier interface {
 	GetUserByUsername(ctx context.Context, username string) (User, error)
 	// Insert a new refresh token for a user.
 	InsertRefreshToken(ctx context.Context, arg InsertRefreshTokenParams) (RefreshToken, error)
+	InsertSigningKey(ctx context.Context, arg InsertSigningKeyParams) (SigningKey, error)
+	// All signing keys, active first. Feeds the in-memory cache and JWKS.
+	ListSigningKeys(ctx context.Context) ([]SigningKey, error)
 	// Retrieves a list of users with optional pagination.
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	// Updates an existing user's information

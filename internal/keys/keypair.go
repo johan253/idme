@@ -1,8 +1,8 @@
 package keys
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -10,19 +10,17 @@ import (
 	"fmt"
 )
 
-const rsaKeyBits = 2048
-
 // KeyPair is a signing key held in memory. Private is nil for verify-only
 // entries loaded from other pods' rotations before the active flip.
 type KeyPair struct {
 	Kid     string
-	Public  *rsa.PublicKey
-	Private *rsa.PrivateKey
+	Public  ed25519.PublicKey
+	Private ed25519.PrivateKey
 }
 
-// GenerateRSA creates a fresh RSA keypair with a random kid.
-func GenerateRSA() (*KeyPair, error) {
-	priv, err := rsa.GenerateKey(rand.Reader, rsaKeyBits)
+// GenerateEd25519 creates a fresh Ed25519 keypair with a random kid.
+func GenerateEd25519() (*KeyPair, error) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +28,7 @@ func GenerateRSA() (*KeyPair, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &KeyPair{Kid: kid, Public: &priv.PublicKey, Private: priv}, nil
+	return &KeyPair{Kid: kid, Public: pub, Private: priv}, nil
 }
 
 func randomKid() (string, error) {
@@ -41,7 +39,7 @@ func randomKid() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
-func encodePublicPEM(pub *rsa.PublicKey) (string, error) {
+func encodePublicPEM(pub ed25519.PublicKey) (string, error) {
 	der, err := x509.MarshalPKIXPublicKey(pub)
 	if err != nil {
 		return "", err
@@ -49,7 +47,7 @@ func encodePublicPEM(pub *rsa.PublicKey) (string, error) {
 	return string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})), nil
 }
 
-func decodePublicPEM(s string) (*rsa.PublicKey, error) {
+func decodePublicPEM(s string) (ed25519.PublicKey, error) {
 	block, _ := pem.Decode([]byte(s))
 	if block == nil {
 		return nil, errors.New("invalid public pem")
@@ -58,22 +56,33 @@ func decodePublicPEM(s string) (*rsa.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	rsaPub, ok := pub.(*rsa.PublicKey)
+	ed25519Pub, ok := pub.(ed25519.PublicKey)
 	if !ok {
-		return nil, fmt.Errorf("expected rsa public key, got %T", pub)
+		return nil, fmt.Errorf("expected ed25519 public key, got %T", pub)
 	}
-	return rsaPub, nil
+	return ed25519Pub, nil
 }
 
-func encodePrivatePEM(priv *rsa.PrivateKey) []byte {
-	der := x509.MarshalPKCS1PrivateKey(priv)
-	return pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: der})
+func encodePrivatePEM(priv ed25519.PrivateKey) ([]byte, error) {
+	der, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		return nil, err
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}), nil
 }
 
-func decodePrivatePEM(b []byte) (*rsa.PrivateKey, error) {
+func decodePrivatePEM(b []byte) (ed25519.PrivateKey, error) {
 	block, _ := pem.Decode(b)
 	if block == nil {
 		return nil, errors.New("invalid private pem")
 	}
-	return x509.ParsePKCS1PrivateKey(block.Bytes)
+	priv, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	ed25519Priv, ok := priv.(ed25519.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("expected ed25519 private key, got %T", priv)
+	}
+	return ed25519Priv, nil
 }

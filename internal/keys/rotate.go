@@ -28,7 +28,7 @@ func NewRotator(pool PgxPool, cipher Cipher) *Rotator {
 // reload; publish it as a verification key first, then Promote once every
 // pod has seen it.
 func (r *Rotator) Generate(ctx context.Context) (string, error) {
-	kp, err := GenerateRSA()
+	kp, err := GenerateEd25519()
 	if err != nil {
 		return "", err
 	}
@@ -36,7 +36,11 @@ func (r *Rotator) Generate(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sealed, err := r.cipher.Seal(encodePrivatePEM(kp.Private))
+	privPEM, err := encodePrivatePEM(kp.Private)
+	if err != nil {
+		return "", err
+	}
+	sealed, err := r.cipher.Seal(privPEM)
 	if err != nil {
 		return "", err
 	}

@@ -2,16 +2,15 @@ package keys
 
 import (
 	"encoding/base64"
-	"math/big"
 )
 
 type JWK struct {
 	Kty string `json:"kty"`
+	Crv string `json:"crv"`
 	Kid string `json:"kid"`
 	Use string `json:"use"`
 	Alg string `json:"alg"`
-	N   string `json:"n"`
-	E   string `json:"e"`
+	X   string `json:"x"`
 }
 
 type JWKS struct {
@@ -24,12 +23,12 @@ func (m *Manager) PublishSet() JWKS {
 	out := JWKS{Keys: make([]JWK, 0, len(all))}
 	for _, k := range all {
 		out.Keys = append(out.Keys, JWK{
-			Kty: "RSA",
+			Kty: "OKP",
+			Crv: "Ed25519",
 			Kid: k.Kid,
 			Use: "sig",
-			Alg: "RS256",
-			N:   base64.RawURLEncoding.EncodeToString(k.Public.N.Bytes()),
-			E:   base64.RawURLEncoding.EncodeToString(big.NewInt(int64(k.Public.E)).Bytes()),
+			Alg: "EdDSA",
+			X:   base64.RawURLEncoding.EncodeToString(k.Public),
 		})
 	}
 	return out

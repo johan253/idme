@@ -18,6 +18,14 @@ type RefreshToken struct {
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 }
 
+type SigningKey struct {
+	Kid        string             `json:"kid"`
+	PublicPem  string             `json:"public_pem"`
+	PrivateEnc []byte             `json:"private_enc"`
+	IsActive   bool               `json:"is_active"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
+
 type User struct {
 	ID           pgtype.UUID      `json:"id"`
 	Username     string           `json:"username"`
