@@ -54,7 +54,7 @@ type InsertRefreshTokenParams struct {
 	UserID    pgtype.UUID      `json:"user_id"`
 	TokenHash string           `json:"token_hash"`
 	ExpiresAt pgtype.Timestamp `json:"expires_at"`
-	IpAddress interface{}      `json:"ip_address"`
+	IpAddress string           `json:"ip_address"`
 }
 
 // Insert a new refresh token for a user.

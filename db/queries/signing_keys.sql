@@ -17,7 +17,7 @@ RETURNING *;
 -- name: DeactivateAllSigningKeys :exec
 UPDATE signing_keys SET is_active = false WHERE is_active;
 
--- name: ActivateSigningKey :exec
+-- name: ActivateSigningKey :execrows
 UPDATE signing_keys SET is_active = true WHERE kid = $1;
 
 -- name: DeleteSigningKey :exec

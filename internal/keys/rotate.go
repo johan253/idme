@@ -80,8 +80,12 @@ func (r *Rotator) Promote(ctx context.Context, kid string) error {
 	if err := q.DeactivateAllSigningKeys(ctx); err != nil {
 		return err
 	}
-	if err := q.ActivateSigningKey(ctx, kid); err != nil {
-		return fmt.Errorf("activate %s: %w", kid, err)
+	rows, err := q.ActivateSigningKey(ctx, kid)
+	if err != nil {
+		return fmt.Errorf("promote %s: %w", kid, err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("promote %s: signing key not found", kid)
 	}
 	return tx.Commit(ctx)
 }

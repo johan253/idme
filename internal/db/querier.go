@@ -11,7 +11,7 @@ import (
 )
 
 type Querier interface {
-	ActivateSigningKey(ctx context.Context, kid string) error
+	ActivateSigningKey(ctx context.Context, kid string) (int64, error)
 	// Inserts a new user into the users table and returns the created user.
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeactivateAllSigningKeys(ctx context.Context) error

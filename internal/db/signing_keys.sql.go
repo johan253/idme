@@ -9,13 +9,16 @@ import (
 	"context"
 )
 
-const activateSigningKey = `-- name: ActivateSigningKey :exec
+const activateSigningKey = `-- name: ActivateSigningKey :execrows
 UPDATE signing_keys SET is_active = true WHERE kid = $1
 `
 
-func (q *Queries) ActivateSigningKey(ctx context.Context, kid string) error {
-	_, err := q.db.Exec(ctx, activateSigningKey, kid)
-	return err
+func (q *Queries) ActivateSigningKey(ctx context.Context, kid string) (int64, error) {
+	result, err := q.db.Exec(ctx, activateSigningKey, kid)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const deactivateAllSigningKeys = `-- name: DeactivateAllSigningKeys :exec
