@@ -16,4 +16,15 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-)
+);
+
+CREATE TABLE IF NOT EXISTS signing_keys (
+    kid VARCHAR PRIMARY KEY,
+    public_pem VARCHAR NOT NULL,
+    private_enc BYTEA NOT NULL
+    is_active BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS signing_keys_one_active
+    ON signing_keys(is_active) WHERE is_active;
